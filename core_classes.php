@@ -150,7 +150,7 @@ class Analyzer {
 
 	}
 	public function display_daychart($ticker_symbol, $date) {
-		$conn = db_connect();
+		$conn = $this->db_connection;
 		//Display the daychart of a given stock
 		//lets check again to make sure we have the price in the database
 		$this->check_snapshot($ticker_symbol,$date);
@@ -166,7 +166,7 @@ class Analyzer {
 	}
 
 	public function capture_snapshot($ticker_symbol,$date,$hi,$lo,$open,$close) {
-		$conn = db_connect();
+		$conn = $this->db_connection;
 		$sql = "insert into stock_snapshot values(DEFAULT,'$ticker_symbol','$date',$hi,$lo,$open,$close);";
 		//echo $sql;
 		mysqli_query($conn,$sql);
@@ -234,16 +234,7 @@ class Analyzer {
 
 }
 
-function db_connect() {
-	$username = "root";
-	$password = "jonjon";
-	$hostname = "localhost"; 
 
-	//connection to the database
-	$dbhandle = mysqli_connect($hostname,$username,$password,"abbastoons_stock");
-	//echo "Connected to MySQL<br>";
-	return $dbhandle;
-}
 
 
 
