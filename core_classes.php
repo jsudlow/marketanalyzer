@@ -2,10 +2,11 @@
 ini_set('display_errors','On');
 
 class ServerProperties {
+
 	public function is_post() {
 		if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 			return 1;
-		}
+		} 
 		else {
 			return null;
 		}
@@ -13,9 +14,8 @@ class ServerProperties {
 }
 
 class PostAccess {
-	public function check_ticker() {
-		$ticker_symbol = $this->get_ticker_symbol();
-		
+	
+	public function check_ticker($ticker_symbol) {
 		if($ticker_symbol == "" || !isset($ticker_symbol)) {
 			return 0;
 		}
@@ -24,31 +24,72 @@ class PostAccess {
 	}
 
 	public function get_ticker_symbol(){
-		return trim($_POST['ticker_name']);
+		$ticker_symbol = trim($_POST['ticker_name']);
+
+		$result = $this->check_ticker($ticker_symbol);
+
+		if($result == 1) {
+			return $ticker_symbol;
+		}
+		else {
+			return 'FAIL';
+		}
+
+
+
 	}
 }
 
-class analyzer {
+class Analyzer {
+	public $today;
+	public $hour_trading_day_ends;
+	public $db_connection;
+
+
+	function __construct() {
+       $this->today = date('Y-m-d');
+       $this->hour_trading_day_ends = 16;
+
+       //Lets get one single connection to the database, so we dont constantly re connect to the same thing.
+       $this->db_connection = $this->db_connect();
+    }
+
+	public function db_connect() {
+		$username = "root";
+		$password = "jonjon";
+		$hostname = "localhost"; 
+
+		//connection to the database
+		$dbhandle = mysqli_connect($hostname,$username,$password,"abbastoons_stock");
+		//echo "Connected to MySQL<br>";
+		return $dbhandle;
+	}
+
+	public function days_ago($days) {
+		return date('Y-m-d',strtotime($this->today . '- ' . "$days" . ' day'));
+	}
 
 	public function analyze($ticker_symbol) {
+		
 		echo "Analyzing: " . "<b>$ticker_symbol</b>" . "<br />";
-		$today = date('Y-m-d');
-		$sixdaysago = date('Y-m-d',strtotime($today . '- 6 day'));
-		echo "Analysis Report for <b>" . $ticker_symbol . "</b> for the date of <b>" . $today . "</b><br />";
-		if (date('H') <= 16) { 
-		echo 'Trading day has not concluded - unable to show day chart';
+		echo $this->today;
+		
+		$sixdaysago = $this->days_ago(6);
+		echo "Analysis Report for <b>" . $ticker_symbol . "</b> for the date of <b>" . $this->today . "</b><br />";
+		if (date('H') <= $this->hour_trading_day_ends) { 
+		echo 'Trading day has not concluded - unable to show hi,lo or close! <br />';
 		 }
 		 else {
-		 	$this->display_daychart($ticker_symbol, $today);
+		 	$this->display_daychart($ticker_symbol, $this->today);
 		 }
 		//Start analyzing the stock by displaying a day chart and a range to start to get a trend established		
 		
-		$this->display_chart_daterange($ticker_symbol,$sixdaysago,$today);
+		$this->display_chart_daterange($ticker_symbol,$sixdaysago,$this->today);
 	}
 
 	public function check_snapshot($ticker_symbol,$date) {
 		echo "Checking to see if we have the snapshot for $ticker_symbol in our database...";
-		$conn = db_connect();
+		$conn = $this->db_connection;
 		$sql = "select * from stock_snapshot where ticker_symbol = '$ticker_symbol' and date_captured = '$date';";
 		//echo $sql;
 		$result = mysqli_query($conn,$sql);
@@ -134,12 +175,13 @@ class analyzer {
 	public function display_chart_daterange($ticker_symbol,$date_begin,$date_end) {
 		//declare a dates array to hold all the dates we will be looking at
 		$dates = array();
-		echo 'running date range';
+		echo 'running date range <br />';
+		echo "<div style='border:solid 1px black; width:200px;';>";
 		echo 'Date Begin: ' . $date_begin . "<br />";
 		echo 'Date End: ' . $date_end . "<br />";  
-
+		echo "</div>";
 	
-		echo 'running date range';
+		echo 'usings these values';
 		$date_begin_ind = explode("-",$date_begin);
 		$date_end_ind = explode("-",$date_end);
 
@@ -176,7 +218,8 @@ class analyzer {
 			}
 
 
-			echo "<b>Date</b> "  . $line_of_text[0] . "<br />";
+			echo "<b>Date</b> "  . $line_of_text[0] . "<br /><br />";
+
 			echo "<b>Open</b>" . $line_of_text[1]. "<br />";
 			echo "<b>High</b>" . $line_of_text[2] . "<br />";
 			echo "<b>Low</b>" . $line_of_text[3] . "<br />";

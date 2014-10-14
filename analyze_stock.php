@@ -1,9 +1,9 @@
 <html>
 <head>
-	<title>Abbs Stock Analyzer</title>
+	<title>MarketAnalyzer</title>
 </head>
 <body>
-<h1> Abbs Stock Analyzer</h1>
+<h1>Market Analyzer</h1>
 
 <form method="POST" action="<?php echo $_SERVER['PHP_SELF']; ?>">
 	Ticker Symbol: <input type='text' name="ticker_name" /><br />
@@ -21,13 +21,16 @@
 	if ($server->is_post()) {
 		//If a ticker symbol was entered correctly
 		$post = new PostAccess;
-		if ($post->check_ticker()) {
-			//run analyze on the given ticker symbol
-			$analyzer = new analyzer;
-			$analyzer->analyze($post->get_ticker_symbol());
+		//run analyze on the given ticker symbol
+		$analyzer = new Analyzer;
+		$ticker = $post->get_ticker_symbol();
+
+		if($ticker != 'FAIL') {
+			$analyzer->analyze($ticker);
 		}
 		else {
-			echo 'Ticker not entered';
+			echo 'ticker is invalid';
 		}
+		
 	}
 	?>
