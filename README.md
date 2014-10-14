@@ -7,7 +7,7 @@ the code is dirty and sloppy - this will get fixed. I hobbled it into classes to
 
 IF you want to play along, check the code out into a folder that you can access with your web browser.
 
-After that install mysql and import the .sql file.
+After that install mysql and import the .sql file. This includes creating and naming the new db 'abbastoons_stock'. If you dislike the name you can easily rename it and simply adjust the name in the core classes file via the db connect function
 
 This should get you up and rolling.
 
