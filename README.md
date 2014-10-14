@@ -19,4 +19,10 @@ The goal is to get a nice tool for a bot to use that we can simulate trading wit
 so we can define multiple strategies or trading algorithms and switch them in and out or pit them against each other to do
 performance evaluations. 
 
+There is a nice repo on google code for yahoos csv api
+
+https://code.google.com/p/yahoo-finance-managed/wiki/CSVAPI
+
+How simple is stuffing a yahoo url with the variables you want?
+
 
