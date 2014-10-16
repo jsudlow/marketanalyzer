@@ -48,7 +48,7 @@ class Analyzer {
 
 	function __construct() {
        $this->today = date('Y-m-d');
-       $this->hour_trading_day_ends = 16;
+       $this->hour_trading_day_ends = 15;
 
        //Lets get one single connection to the database, so we dont constantly re connect to the same thing.
        $this->db_connection = $this->db_connect();
@@ -150,14 +150,17 @@ class Analyzer {
 
 	}
 	public function display_daychart($ticker_symbol, $date) {
-		$conn = $this->db_connection;
 		//Display the daychart of a given stock
 		//lets check again to make sure we have the price in the database
 		$this->check_snapshot($ticker_symbol,$date);
+		$this->display_hloc_daily($ticker_symbol,$date);
+	}
+	public function display_hloc_daily($ticker_symbol, $date) {
+		$conn = $this->db_connection;
 		$sql = "select * from stock_snapshot where ticker_symbol = '$ticker_symbol' and date_captured = '$date';";
 		$result = mysqli_query($conn,$sql);
 		$row = mysqli_fetch_array($result, MYSQLI_ASSOC);
-		$day_of_week = date('l',$date);
+		
 		echo "<b>Date:</b> " . $date . "<br /> Day of Week:" . date('l',strtotime($date)) . "<br />";
 		echo "<br /><b>High:</b> " . $row['hi'] . "<br />";
 		echo "<b>Low:</b> " . $row['low'] . "<br />";
@@ -175,64 +178,33 @@ class Analyzer {
 	public function display_chart_daterange($ticker_symbol,$date_begin,$date_end) {
 		//declare a dates array to hold all the dates we will be looking at
 		$dates = array();
+		$date_begin_i = new DateTime($date_begin);
+		$date_end_e = new DateTime($date_end);
 		echo 'running date range <br />';
 		echo "<div style='border:solid 1px black; width:200px;';>";
 		echo 'Date Begin: ' . $date_begin . "<br />";
 		echo 'Date End: ' . $date_end . "<br />";  
 		echo "</div>";
 	
-		echo 'usings these values';
-		$date_begin_ind = explode("-",$date_begin);
-		$date_end_ind = explode("-",$date_end);
-
-    	$begin_month = $date_begin_ind[1] -1;
-    	$begin_day = $date_begin_ind[2];
-   		$begin_year = $date_begin_ind[0];
-
-    	$end_month = $date_end_ind[1] -1;
-    	$end_day = $date_end_ind[2];
-    	$end_year = $date_end_ind[0];
-    
-		$url = "http://ichart.yahoo.com/table.csv?s=$ticker_symbol&a=$begin_month&b=$begin_day&c=$begin_year&d=$end_month&e=$end_day&f=$end_year&g=d";
-		echo $url;
-		$row = 0;
-		$file_handle = @fopen($url, "r");
-
-		if ( $file_handle == FALSE ) { // If the URL can't be opened
-			$error_message = "Cannot get data from Yahoo! Finance. The following URL is not accessible, $url";
-			return -1; // ERROR
-		}
-
-		while (!feof($file_handle) ) {
-			$line_of_text = fgetcsv($file_handle, 1024);
-			
-			if($row == 0 ) { 
-				echo 'headers found <br />';
-				$row++;
+		for($i=$date_begin_i;$i<=$date_end_e;$i->modify('+1 day')) {
+			echo $i->format('Y-m-d') . "<br />";
+			$day_of_week = date('l',strtotime($i->format('Y-m-d')));
+			echo $day_of_week;
+			if($day_of_week == 'Sunday' || $day_of_week == 'Saturday') {
+				echo 'Weekend Date Detected/Not Bothering to check';
 				continue;
 			}
-
-			if($line_of_text[0] == "") {
-				echo 'empty row detected <br />';
-				continue;
-			}
-
-
-			echo "<b>Date</b> "  . $line_of_text[0] . "<br /><br />";
-
-			echo "<b>Open</b>" . $line_of_text[1]. "<br />";
-			echo "<b>High</b>" . $line_of_text[2] . "<br />";
-			echo "<b>Low</b>" . $line_of_text[3] . "<br />";
-			echo "<b>Close</b>" . $line_of_text[4] . "<br /><br />";
-
+			$this->check_snapshot($ticker_symbol,$i->format('Y-m-d'));
+			$this->display_hloc_daily($ticker_symbol, $i->format('Y-m-d'));
+		}
+		
 		}
 
-		fclose($file_handle);
-
+		
 	}
 //end of analyzer class
 
-}
+
 
 
 
