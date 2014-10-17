@@ -85,6 +85,9 @@ class Analyzer {
 		//Start analyzing the stock by displaying a day chart and a range to start to get a trend established		
 		
 		$this->display_chart_daterange($ticker_symbol,$sixdaysago,$this->today);
+
+		//Lets get a trend!
+		$this->calculate_trend($ticker_symbol,$sixdaysago,$this->today);
 	}
 
 	public function check_snapshot($ticker_symbol,$date) {
@@ -174,10 +177,61 @@ class Analyzer {
 		//echo $sql;
 		mysqli_query($conn,$sql);
     }
+    public function calculate_price_movement($ticker_symbol,$date) {
+    	$conn = $this->db_connection;
+		$sql = "select * from stock_snapshot where ticker_symbol = '$ticker_symbol' and date_captured = '$date';";
+		$result = mysqli_query($conn,$sql);
+		$row = mysqli_fetch_array($result, MYSQLI_ASSOC);
+		return $row['open'] - $row['close'];
+    }
+    public function calculate_percent_difference($num1,$num2) {
+    	$v1 = $num1;
+    	$v2 = $num2;
+
+    	return abs($v1 - $v2) / (($v1 + $v2)/2) * 100;
+    }
+
+    public function calculate_trend($ticker_symbol,$date_begin,$date_end) {
+    	$date_begin_i = new DateTime($date_begin);
+		$date_end_e = new DateTime($date_end);
+		$price_stack = [];
+
+		for($i=$date_begin_i;$i<=$date_end_e;$i->modify('+1 day')) {
+			$day_of_week = date('l',strtotime($i->format('Y-m-d')));
+			
+			if($day_of_week == 'Sunday' || $day_of_week == 'Saturday') {
+				
+				continue;
+			}
+			$conn = $this->db_connection;
+			$date = $i->format('Y-m-d');
+			$sql = "select * from stock_snapshot where ticker_symbol = '$ticker_symbol' and date_captured = '$date';";
+			$result = mysqli_query($conn,$sql);
+			$row = mysqli_fetch_array($result, MYSQLI_ASSOC);
+			if($row['close'] != NULL) {
+				array_push($price_stack, $row['close']);
+			}
+		}
+       
+        $start = $price_stack[0];
+        $end = end($price_stack);
+        echo 'Start: ' . $start;
+        echo 'End: ' .$end;
+        //baseline trend read
+        if($start > $end) {
+        	
+        	echo "Trend is negative. Down from six days ago by " . $this->calculate_percent_difference($start,$end) . " percent";
+        }
+        else {
+        	echo "Trend is postive. Up from six days ago by " . $this->calculate_percent_difference($start,$end) . "percent";
+        }
+		
+		//obviously more calculating will come
+    }
 
 	public function display_chart_daterange($ticker_symbol,$date_begin,$date_end) {
 		//declare a dates array to hold all the dates we will be looking at
-		$dates = array();
+		
 		$date_begin_i = new DateTime($date_begin);
 		$date_end_e = new DateTime($date_end);
 		echo 'running date range <br />';
@@ -196,6 +250,7 @@ class Analyzer {
 			}
 			$this->check_snapshot($ticker_symbol,$i->format('Y-m-d'));
 			$this->display_hloc_daily($ticker_symbol, $i->format('Y-m-d'));
+			
 		}
 		
 		}
