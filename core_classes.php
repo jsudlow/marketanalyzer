@@ -90,18 +90,7 @@ class Analyzer {
 		$this->calculate_trend($ticker_symbol,$sixdaysago,$this->today);
 	}
 
-	public function check_snapshot($ticker_symbol,$date) {
-		echo "Checking to see if we have the snapshot for $ticker_symbol in our database...";
-		$conn = $this->db_connection;
-		$sql = "select * from stock_snapshot where ticker_symbol = '$ticker_symbol' and date_captured = '$date';";
-		//echo $sql;
-		$result = mysqli_query($conn,$sql);
-	
-	
-		$num_rows = mysqli_num_rows($result);
-		if($num_rows == 0) {
-			echo "need to get a snapshot <br />";
-		
+	public function read_yahoo_single_ohlc($ticker_symbol,$date) {
 			$date_begin_ind = explode("-",$date);
 			$begin_month = $date_begin_ind[1] -1;
         	$begin_day = $date_begin_ind[2];
@@ -110,49 +99,70 @@ class Analyzer {
 			echo $url;
 	    	$file_handle = @fopen($url, "r");
 			if ( $file_handle == FALSE ) { // If the URL can't be opened
-				$error_message = "Cannot get data from Yahoo! Finance. The following URL is not accessible, $url";
+				echo "Cannot get data from Yahoo! Finance. The following URL is not accessible, $url";
 			return -1; // ERROR
-		}
-		$hi="";
-		$low="";
-		$open="";
-		$close="";
-		$row = 0;
-	    while (!feof($file_handle) ) {
-         $line_of_text = fgetcsv($file_handle, 1024);
-         if($row==0) {
-         	$row++;
-         	continue;
+			}
+			$hi="";
+			$low="";
+			$open="";
+			$close="";
+			$row = 0;
+	    	while (!feof($file_handle) ) {
+         		$line_of_text = fgetcsv($file_handle, 1024);
+         		if($row==0) {
+         			$row++;
+         			continue;
+         		}
+	         	if($line_of_text[0] != "") {
+    	     		$open=$line_of_text[1];
+        	 	    $hi = $line_of_text[2];
+         		    $low= $line_of_text[3];
+         	   		$close=$line_of_text[4];    
+         		}    
+         	}
+         	$return_array = array("open"=>$open,"hi"=>$hi,"low"=>$low,"close"=>$close);
+         	echo 'return arry;;:' . var_dump($return_array);
+         	return $return_array;
 
-         }
-         	if($line_of_text[0] != "") {
-         		$open=$line_of_text[1];
-         	    $hi = $line_of_text[2];
-         	    $low= $line_of_text[3];
-         	   	$close=$line_of_text[4];    
-         	}    
-         }
-		
+	}
+	public function validate_yahoo_single_ohlc($ticker_symbol,$ohlc_array,$date) {
 		echo "validating snapshot... <br />";
-		
-    	if($hi != "" && $low != "" && $open != "" && $close != "") { 
+
+		$open = $ohlc_array['open'];
+		$hi = $ohlc_array['hi'];
+		$low = $ohlc_array['low'];
+		$close = $ohlc_array['close'];
+    	
+    	if($open != "" && $hi != "" && $low != "" && $close != "") { 
     		echo "snap is good capturing into our database <br />";
-   		 	$this->capture_snapshot($ticker_symbol,$date,$hi,$low,$open,$close);
-   		 }
-   		 else {
+   			$this->capture_snapshot($ticker_symbol,$date,$hi,$low,$open,$close);
+   		}
+   		else {
+   			die("snapshot invalid; ticker symbol is most likly not valid");
+   		}
 
-   		 	die("snapshot invalid; ticker symbol is most likly not valid");
-   		 }
-
-		
 	}
-	else {
-		echo "we already got the snap! <br />";
-	}
+	public function check_snapshot($ticker_symbol,$date) {
+		echo "Checking to see if we have the snapshot for $ticker_symbol in our database...";
+		$conn = $this->db_connection;
+		$sql = "select * from stock_snapshot where ticker_symbol = '$ticker_symbol' and date_captured = '$date';";
+		//echo $sql;
+		$result = mysqli_query($conn,$sql);
 	
+		$num_rows = mysqli_num_rows($result);
+		
+		if($num_rows == 0) {
+			echo "need to get a snapshot <br />";
+			$ohlc_array = $this->read_yahoo_single_ohlc($ticker_symbol,$date);
+			$this->validate_yahoo_single_ohlc($ticker_symbol,$ohlc_array,$date);		
+		}
+		else {
+				echo "we already got the snap! <br />";
+		}
+		
 
 	}
-	public function display_daychart($ticker_symbol, $date) {
+	public function display_daychart($ticker_symbol,$date) {
 		//Display the daychart of a given stock
 		//lets check again to make sure we have the price in the database
 		$this->check_snapshot($ticker_symbol,$date);
